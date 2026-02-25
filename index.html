@@ -603,6 +603,24 @@
               this.highestScore = Math.ceil(this.distanceRan);
               this.distanceMeter.setHighScore(this.highestScore);
             }
+            
+            // Send score to Play.fun
+            try {
+              if (window.playFunSDK) {
+                const finalScore = Math.ceil(this.distanceRan);
+                // Add points accumulated during gameplay
+                window.playFunSDK.addPoints(finalScore);
+                // End game and save all points (shows modal)
+                window.playFunSDK.endGame().then(() => {
+                  console.log('Score saved to Play.fun:', finalScore);
+                }).catch(err => {
+                  console.log('Error saving score:', err);
+                });
+              }
+            } catch (e) {
+              console.log('SDK error:', e);
+            }
+            
             // Reset the time clock.
             this.time = getTimeStamp();
           },
@@ -2520,11 +2538,50 @@
         </template>
       </div>
       <script type="text/javascript">
-        if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
-          new Runner('.interstitial-wrapper');
-        } else {
-          document.getElementById("main-frame-notchrome").style.display = "";
-        }
+        // Initialize Play.fun SDK
+        document.addEventListener('DOMContentLoaded', () => {
+          try {
+            window.playFunSDK = new OpenGameSDK({
+              ui: {
+                usePointsWidget: true,
+                useCustomUI: false,
+                theme: 'system'
+              }
+            });
+
+            window.playFunSDK.on('OnReady', () => {
+              console.log('OpenGameSDK Ready');
+            });
+
+            window.playFunSDK.init({ gameId: '12300339-4b80-4a4b-a386-fe5651826bb8' })
+              .then(() => {
+                console.log('OpenGameSDK Initialized');
+                // Start the game after SDK is ready
+                if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+                  new Runner('.interstitial-wrapper');
+                } else {
+                  document.getElementById("main-frame-notchrome").style.display = "";
+                }
+              })
+              .catch(err => {
+                console.error('SDK init error:', err);
+                // Start game anyway if SDK fails
+                if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+                  new Runner('.interstitial-wrapper');
+                } else {
+                  document.getElementById("main-frame-notchrome").style.display = "";
+                }
+              });
+          } catch (e) {
+            console.log('SDK not available:', e);
+            // Start game anyway if SDK not available
+            if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+              new Runner('.interstitial-wrapper');
+            } else {
+              document.getElementById("main-frame-notchrome").style.display = "";
+            }
+          }
+        });
       </script>
       <div class="onlyforchrome">
         <div id="socialbutts" class="addthis_toolbox addthis_default_style" style="text-align:center; padding-top:65px;">
